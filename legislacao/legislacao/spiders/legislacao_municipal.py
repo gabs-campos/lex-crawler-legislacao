@@ -9,7 +9,7 @@ class LegislacaoMunicipalSpider(scrapy.Spider):
         # Extrair os links para as páginas de detalhes de cada legislação
         links = response.css('div.bx-resultado a::attr(href)').extract()
         for link in links:
-            yield response.follow(link, self.parse_details)
+            yield response.follow(link, self.parse_full_text)
 
         # Paginação
         next_page_title = response.xpath('/html/body/section/div/div[2]/div/div[2]/div/div[4]/ul/span[1]/text()').get()
@@ -19,12 +19,24 @@ class LegislacaoMunicipalSpider(scrapy.Spider):
         if next_page <= last_page:
             yield response.follow(next_url, self.parse)
 
-    def parse_details(self, response):
+    def parse_full_text(self, response):
         # Extrair informações detalhadas de cada página de legislação
         title = response.css("h4::text").get()
         div_law = response.xpath('/html/body/section/div/div[2]/div[2]/div/div[4]')
         text = ' '.join(div_law.css('*::text').extract()).strip()
-        yield {
-            'title': title,
-            'text': text
-        }
+        details_url = response.xpath("//ul[@class='bx-btn']/li/a/@href").extract_first()
+        yield response.follow(details_url, self.parse_details, meta={'title': title, 'text': text})
+
+    def parse_details(self, response):
+        # Extrair informações detalhadas de cada página de legislação
+        title = response.meta['title']
+        text = response.meta['text']
+        rows = response.xpath("//table/tbody/tr")
+        item = {'title': title, 'text': text}
+        for row in rows:
+            key = row.xpath('td[@class="nameMeta"]/text()').get().strip()
+            value = row.xpath('td[2]//text()').getall()
+            # value = ' '.join([v.strip() for v in value if v.strip()])  # Junta os textos e remove espaços extras
+            item[key] = value
+            
+        yield item
