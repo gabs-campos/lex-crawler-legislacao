@@ -7,6 +7,10 @@ import scrapy
 
 
 class LegislacaoItem(scrapy.Item):
-    # define the fields for your item here like:
-    # name = scrapy.Field()
-    pass
+    esfera = scrapy.Field()
+    numero = scrapy.Field()
+    ano = scrapy.Field()
+    ementa = scrapy.Field()
+    integra = scrapy.Field()
+    url = scrapy.Field()
+    embedding = scrapy.Field()

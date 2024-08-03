@@ -1,4 +1,7 @@
 import scrapy
+from legislacao.items import LegislacaoItem
+import sentence_transformers
+from transformers import AutoTokenizer, AutoModel
 
 class LegislacaoMunicipalSpider(scrapy.Spider):
     name = 'legislacao_municipal'
@@ -36,7 +39,23 @@ class LegislacaoMunicipalSpider(scrapy.Spider):
         for row in rows:
             key = row.xpath('td[@class="nameMeta"]/text()').get().strip()
             value = row.xpath('td[2]//text()').getall()
-            # value = ' '.join([v.strip() for v in value if v.strip()])  # Junta os textos e remove espaços extras
             item[key] = value
             
-        yield item
+        yield LegislacaoItem(
+            esfera='municipal',
+            numero=item.get('title', ''),
+            ano=item.get('Data de publicação', '')[0].split('/')[-1],
+            ementa=item.get('Ementa', ''),
+            integra=item.get('text', ''),
+            url=response.url,
+            embedding=self.embedding(item.get('text', ''))
+        )
+
+
+    def embedding(self, doc: str):
+        model = sentence_transformers.SentenceTransformer('all-MiniLM-L6-v2')
+        vector = model.encode(doc)
+        return vector
+
+
+    
