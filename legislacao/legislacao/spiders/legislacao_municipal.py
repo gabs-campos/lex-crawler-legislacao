@@ -2,11 +2,13 @@ import scrapy
 from legislacao.items import LegislacaoItem
 import sentence_transformers
 from transformers import AutoTokenizer, AutoModel
+import re
 
 class LegislacaoMunicipalSpider(scrapy.Spider):
     name = 'legislacao_municipal'
     allowed_domains = ['legislacao.prefeitura.sp.gov.br']
     start_urls = ['https://legislacao.prefeitura.sp.gov.br/busca/pg/1?ano-inicial=2024']
+    
 
     def parse(self, response):
         # Extrair os links para as páginas de detalhes de cada legislação
@@ -41,9 +43,11 @@ class LegislacaoMunicipalSpider(scrapy.Spider):
             value = row.xpath('td[2]//text()').getall()
             item[key] = value
             
+            
         yield LegislacaoItem(
             esfera='municipal',
-            numero=item.get('title', ''),
+            title=item.get('title', ''),
+            numero=self.parse_numero(item.get('Número', '')),
             ano=item.get('Data de publicação', '')[0].split('/')[-1],
             ementa=item.get('Ementa', ''),
             integra=item.get('text', ''),
@@ -57,5 +61,8 @@ class LegislacaoMunicipalSpider(scrapy.Spider):
         vector = model.encode(doc)
         return vector
 
+    def parse_numero(self, numero):
+        numero = re.sub(r"\d+\.\d+", numero)
+        return numero.group() if numero else None
 
     

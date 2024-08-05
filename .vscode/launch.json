@@ -6,10 +6,9 @@
             "type": "debugpy",
             "request": "launch",
             "program": "${workspaceFolder}/env/bin/scrapy",
+            "cwd": "${workspaceFolder}/legislacao",
             "args": [
                 "runspider",
-                "-O",
-                "municipal.json",
                 "${workspaceFolder}/legislacao/legislacao/spiders/legislacao_municipal.py"
             ],
             "console": "integratedTerminal"
