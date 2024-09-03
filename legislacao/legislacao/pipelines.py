@@ -1,45 +1,38 @@
-import psycopg2
-
 from scrapy.exceptions import DropItem
-import numpy as np
-from psycopg2.extensions import register_adapter, AsIs
+from scrapy.pipelines.files import FilesPipeline
+import base64
+import csv
+import scrapy
+import uuid
+import os
 
+class LegislacaoPipeline(FilesPipeline):
+    def get_media_requests(self, item, info):
+        if 'integra' in item:
+            return [scrapy.Request(url='data:text/plain;base64,' 
+                                   + base64.b64encode(item['integra'].encode('utf-8')).decode('ascii'))]
 
-
-class LegislacaoPipeline:
-    def __init__(self):
-        self.conn = psycopg2.connect(
-            database="lex",
-            user="postgres",
-            password="123456",
-            host="localhost",
-            port="5432"
-        )
-     
-        self.cur = self.conn.cursor()
-
+    def file_path(self, request, response=None, info=None):
+        # Nome do arquivo baseado no URL ou outro critério
+        return f'full_texts/{request.url.split("/")[-1]}.txt'
 
     def process_item(self, item, spider):
-        sql = f"""
-            insert into legislacao 
-            (esfera,numero,ano,ementa,integra,url,embedding) 
-            values 
-            (%s, %s, %s, %s ,%s, %s, %s);
-        """
+        with open('my_data.csv', 'a', newline='') as csvfile:
+            header = [name for name in item.fields.keys() if name != 'integra']
+            writer = csv.DictWriter(csvfile, fieldnames=header)
+            
+            if os.stat('my_data.csv').st_size == 0:
+                writer.writeheader()
+                
+            row = dict(item)
+            row.pop('integra')
+            writer.writerow(row)
+            
+        with open(f"full_texts/{uuid.uuid4()}.txt", 'w') as arquivo:
+            arquivo.write(item['integra'])
 
-        dados = (item['esfera'],item['numero'],item['ano'],item['ementa'],item['integra'],item['url'],[float(x) for x in item['embedding']])
+        return item
 
-        try:
-            self.cur.execute(sql, dados)
-            self.conn.commit()
-            return item
-        except Exception as e:
-            print(f"Erro ao inserir item: {e}")
-            raise DropItem("Erro ao adicionar item  de legislacao ao banco de dados.")
-        
 
-    def close_spider(self, spider):
-        self.cur.close()
-        self.conn.close()
 
 

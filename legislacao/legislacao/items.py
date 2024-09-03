@@ -13,4 +13,4 @@ class LegislacaoItem(scrapy.Item):
     ementa = scrapy.Field()
     integra = scrapy.Field()
     url = scrapy.Field()
-    embedding = scrapy.Field()
+    # embedding = scrapy.Field()

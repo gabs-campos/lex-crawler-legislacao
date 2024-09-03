@@ -7,7 +7,7 @@ import re
 class LegislacaoMunicipalSpider(scrapy.Spider):
     name = 'legislacao_municipal'
     allowed_domains = ['legislacao.prefeitura.sp.gov.br']
-    start_urls = ['https://legislacao.prefeitura.sp.gov.br/busca/pg/1?ano-inicial=2024']
+    start_urls = [f'https://legislacao.prefeitura.sp.gov.br/busca/pg/1?ano-inicial={ano}' for ano in range(1892, 2023)]
     
 
     def parse(self, response):
@@ -33,27 +33,30 @@ class LegislacaoMunicipalSpider(scrapy.Spider):
         yield response.follow(details_url, self.parse_details, meta={'title': title, 'text': text})
 
     def parse_details(self, response):
-        # Extrair informações detalhadas de cada página de legislação
-        title = response.meta['title']
-        text = response.meta['text']
-        rows = response.xpath("//table/tbody/tr")
-        item = {'title': title, 'text': text}
-        for row in rows:
-            key = row.xpath('td[@class="nameMeta"]/text()').get().strip()
-            value = row.xpath('td[2]//text()').getall()
-            item[key] = value
+        try:
+            # Extrair informações detalhadas de cada página de legislação
+            title = response.meta['title']
+            text = response.meta['text']
+            rows = response.xpath("//table/tbody/tr")
+            item = {'title': title, 'text': text}
+            for row in rows:
+                key = row.xpath('td[@class="nameMeta"]/text()').get().strip()
+                value = row.xpath('td[2]//text()').getall()
+                item[key] = value
+                
+            final_item =  LegislacaoItem(
+                esfera='municipal',
+                numero=self.parse_numero(item.get('title', '')),
+                ano=item.get('Data de publicação', '')[0].split('/')[-1],
+                ementa=item.get('Ementa', '')[1],
+                integra=item.get('text', ''),
+                url=response.url
+                # embedding=self.embedding(item.get('text', ''))
+            )
+        except Exception as e:
+            print(e)
             
-            
-        yield LegislacaoItem(
-            esfera='municipal',
-            title=item.get('title', ''),
-            numero=self.parse_numero(item.get('Número', '')),
-            ano=item.get('Data de publicação', '')[0].split('/')[-1],
-            ementa=item.get('Ementa', ''),
-            integra=item.get('text', ''),
-            url=response.url,
-            embedding=self.embedding(item.get('text', ''))
-        )
+        yield final_item
 
 
     def embedding(self, doc: str):
@@ -61,8 +64,8 @@ class LegislacaoMunicipalSpider(scrapy.Spider):
         vector = model.encode(doc)
         return vector
 
-    def parse_numero(self, numero):
-        numero = re.sub(r"\d+\.\d+", numero)
-        return numero.group() if numero else None
+    def parse_numero(self, text):
+        numero = re.findall(r"\d+\.\d+", text)
+        return numero[0] if numero else None
 
     
