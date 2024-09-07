@@ -28,8 +28,8 @@ class LegislacaoPipeline(FilesPipeline):
             row.pop('integra')
             writer.writerow(row)
             
-        with open(f"full_texts/{uuid.uuid4()}.txt", 'w') as arquivo:
-            arquivo.write(item['integra'])
+        # with open(f"full_texts/{uuid.uuid4()}.txt", 'w') as arquivo:
+            # arquivo.write(item['integra'])
 
         return item
 
